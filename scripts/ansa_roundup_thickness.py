@@ -1,68 +1,83 @@
-#set
-# A set in Python is an unordered collection of unique items.
-# Sets do not allow duplicate values, and their elements are not stored in any particular order.
-# You create a set using curly braces {} or the set() function.
-# ets are useful for storing unique values and performing set operations like union, intersection, and difference.
+import ansa
+from ansa import base, constants, guiTk
 
+def main():
 
-my_set = {1, 2, 4, 5, 4, 1, "apple"}
-print(my_set)
-my_set.add("mango")
-print(my_set)
-my_set.remove(4)
-print(my_set)
+    # Create window
+    w = guiTk.DOWindowCreate("PROPERTY THICKNESS VIEWER", guiTk.constants.DOExitDestroy)
 
-#list
-# if you want add any item to list use append function
-# list is changable ,ordered and duplicates are allowwed.
-# square brackets will reprsent the lists.
-#A list in Python is an ordered, mutable collection of items. You can add, remove, or change elements in a list.
- # Lists are created using square brackets [].
-items = []
-items.append(100)
-items.append("apples")
-items.append("banana")
-print(items)
-# if you want replce the diffrent item from your list you mention the place which should be replaced with item name.
-items[0] = "mango"
-print(items)
-# list is changable ,ordered and duplicates are allowwed.
-items.append("guha")
-print(items)
-print(len(items))
-# if we want delete the item  from the list we will use function""pop"""
-items.pop(0)
-items.pop(1)
-print(items)
-# if you identify the length of the list use "len" function(length)
-print(len(items))
+    # Create table with 6 columns
+    table = guiTk.DOTableCreate(w, 0, 6)
+    guiTk.DOTableHeaderSetLabel(table, guiTk.constants.DOHorizontal, 0, "ID")
+    guiTk.DOTableHeaderSetLabel(table, guiTk.constants.DOHorizontal, 1, "Name")
+    guiTk.DOTableHeaderSetLabel(table, guiTk.constants.DOHorizontal, 2, "T1 (Original)")
+    guiTk.DOTableHeaderSetLabel(table, guiTk.constants.DOHorizontal, 3, "T1 (Rounded)")
+    guiTk.DOTableHeaderSetLabel(table, guiTk.constants.DOHorizontal, 4, "Rounding")
+    guiTk.DOTableHeaderSetLabel(table, guiTk.constants.DOHorizontal, 5, "STATUS")
+    guiTk.DOTableSetColumnAcceptText(table, 5, True)
 
+    # Collect LS-DYNA PROPERTIES
+    pid_list = base.CollectEntities(constants.LSDYNA, None, "PROPERTIES", recursive=True)
+    pid_list = sorted(list(pid_list), key=lambda x: x._id)
 
+    row = 0
 
+    for each_pid in pid_list:
 
-#tupple
-# A tuple in Python is an ordered, immutable collection of items. You create a tuple using parentheses ().
-# Once created, you cannot change its elements.
+        # Read name
+        name = base.GetEntityCardValues(constants.LSDYNA, each_pid, ("name",)).get("name", "")
 
-my_tupple = (1, 5.9, 0, 2.2,1,1, "apple")
-my_tupple.add(5)
-print(my_tupple)
+        # Read T1
+        t1_val = base.GetEntityCardValues(constants.LSDYNA, each_pid, ("T1",)).get("T1", "")
 
-#INTERPRETER AND COMPILER
-#The main difference between an interpreter and a compiler is how they execute code:
-#Interpreter: Translates and executes code line by line. If there is an error, it stops at that line. 
-# #Example: Python uses an interpreter.
-#Compiler: Translates the entire code into machine language at once, creating an executable file. Errors are shown after the whole code is checked. 
-#Example: C and C++ use compilers.
-#In summary:
-#- Interpreter: Executes code line by line, no separate output file.
-# Compiler: Converts whole code to an executable file before running.
+        # Convert safely
+        try:
+            t1_float = float(t1_val)
+        except:
+            t1_float = 0.0
 
-#nterpreter examples:
-#Python (runs code line by line)
-#avaScript (in browsers)
-#Ruby
+        # Rounded value (same as screenshot logic)
+        t1_round = round(t1_float, 2)
 
-#Compiler examples:
-#C (code is compiled to an executable before running)C++
-#Java (Java code is compiled to bytecode, then run by the Java Virtual Machine)
+        # Status logic
+        status = "Good"
+        if abs(t1_float - t1_round) > 1e-6:
+            status = "Rounding"
+
+        # Add row to table
+        guiTk.DOTableSetRow(table, row, 0, each_pid._id)
+        guiTk.DOTableSetRow(table, row, 1, str(name))
+        guiTk.DOTableSetRow(table, row, 2, str(t1_val))
+        guiTk.DOTableSetRow(table, row, 3, str(t1_round))
+        guiTk.DOTableSetRow(table, row, 4, "Round to 2 decimals")
+        guiTk.DOTableSetRow(table, row, 5, status)
+
+        row += 1
+
+    # ACCEPT button logic
+    def on_accept(dialog, data):
+        for r in range(row):
+            pid_id = int(float(guiTk.DOTableText(table, r, 0)))
+            rounded_val = float(guiTk.DOTableText(table, r, 3))
+
+            for each_pid in pid_list:
+                if each_pid._id == pid_id:
+                    base.SetEntityCardValues(constants.LSDYNA, each_pid, ("T1", rounded_val))
+
+        guiTk.DOExitDestroy(w)
+
+    accept_btn = guiTk.DOPushButtonCreate(w, "ACCEPT", on_accept, None)
+    guiTk.DOSetBackgroundColor(accept_btn, 0, 255, 0)
+
+    # REJECT button logic
+    def on_reject(dialog, data):
+        guiTk.DOMessageBoxShow("Confirm Rejection",
+                               "Are you sure you want to reject and close the window?",
+                               guiTk.constants.DOMessageBoxYesNo)
+        guiTk.DOExitDestroy(w)
+
+    reject_btn = guiTk.DOPushButtonCreate(w, "REJECT", on_reject, None)
+    guiTk.DOSetBackgroundColor(reject_btn, 255, 0, 0)
+
+if __name__ == "__main__":
+    main()
