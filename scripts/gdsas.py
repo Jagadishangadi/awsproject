@@ -36,3 +36,4 @@ if __name__ == "__main__":
             print(f"Result: {divide(num1, num2)}")
     else:
         print("Invalid input")
+        print("Please select a valid operation (1/2/3/4)")
