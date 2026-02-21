@@ -11,4 +11,5 @@ A practice project to learn Git, GitHub, VS Code, and Python scripting.
 
 ## How to Run
 ```bash
-python src/main.py
+python src/main.py  
+#### MY NAME IS JAGADISH
