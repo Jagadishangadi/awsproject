@@ -13,3 +13,4 @@ A practice project to learn Git, GitHub, VS Code, and Python scripting.
 ```bash
 python src/main.py  
 #### MY NAME IS JAGADISH
+##my inital files
